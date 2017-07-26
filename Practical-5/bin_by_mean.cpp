@@ -1,6 +1,6 @@
 /**	
-	DMBI Practical No. : 3
-	Aim : Calculate Z-score for profit.
+	DMBI Practical No. : 5
+	Aim : Smoothing by bin (mean).
 	
 	Author : Siddharth Goswami
 	Github : https://github.com/siddharth1024
@@ -12,14 +12,28 @@
 #define output_file_normalized_name "Sample_Normalized.csv"
 
 #define LINES 8400
-#define RECORDS LINES-1
+#define RECORDS_COUNT LINES-1
 #define COLUMN_PROFIT 9
+#define BIN_SIZE 100
 
 using namespace std;
 
 /**
-	Z-Score v' = (v - meanA)/Stand.Dev.A
+	Deci-norm v' = v / 10^j (j is smallest integer such that max(|v'|)) < 1
 */
+
+struct Record {
+	int line_no;
+	float profit;
+};
+
+inline bool sortByProfit(const Record &a, const Record &b) {
+	return a.profit < b.profit;
+}
+
+inline bool sortByLineNo(const Record &a, const Record &b) {
+	return a.line_no < b.line_no;
+}
 
 int main() {	
 	ifstream InputFileStream;	
@@ -27,10 +41,9 @@ int main() {
 	
 	InputFileStream.open(input_file_name, ios_base::binary);
 	OutputFileStream.open(output_file_normalized_name);
-	/**
-		Work out the mean.
-	*/
-	float profits[RECORDS], mean = 0, std_dev = 0, z_score = 0;
+	
+	vector <Record> records;
+	vector <Record>::iterator records_iterator;
 
 	string line;
 	getline(InputFileStream, line, '\r');
@@ -48,7 +61,7 @@ int main() {
 
 	for(int c = 0; c < line.length(); c++) { 
 		if(c == insert_idx + 1) {
-			OutputFileStream << ",Z-Score,";
+			OutputFileStream << ",Smoothing (mean),";
 		} else {
 			OutputFileStream << line[c];
 		}
@@ -73,38 +86,44 @@ int main() {
 					f_val += line[c];
 					c++;
 				}
-				profits[p-1] = std::stof(f_val);
+				float profit = stof(f_val);
+				records.push_back(Record {p-1, profit});
 				column_no++;								
 			}			
 		}
 	}
 
-	for(int p = 0; p < RECORDS; p++) {
-		mean += profits[p];
+	sort(records.begin(), records.end(), sortByProfit);
+
+	int item_counter = 1; float basket_mean = 0.0f;
+	vector <Record>::iterator rI, rBegin, rEnd;
+
+	for(records_iterator = records.begin(); 
+		records_iterator != records.end(); 
+		records_iterator++) 
+	{
+		if(item_counter == 1) rBegin = records_iterator;
+		if(item_counter == BIN_SIZE) {
+			basket_mean /= BIN_SIZE;
+			rEnd = records_iterator;
+			for(rI = rBegin; rI != rEnd; rI++) 
+			{
+				(*rI).profit = basket_mean;
+			}
+			item_counter = 0;
+			basket_mean = 0.0f;
+		}
+		Record record = *records_iterator;
+		basket_mean += record.profit;
+		item_counter++;
 	}
-	cout << "\nSum : \t\t" << mean;
-	mean /= RECORDS;
-	cout << "\nMean : \t\t" << mean;
-	cout << "\nRECORDS : \t\t" << RECORDS;
-	
-	for(int p = 0; p < RECORDS; p++) {
-		profits[p] -= mean;
-		profits[p] = profits[p] * profits[p];
-	}
 
-	for(int p = 0; p < RECORDS; p++) {
-		std_dev += profits[p];
-	}
+	sort(records.begin(), records.end(), sortByLineNo);
 
-	std_dev /= RECORDS;
-	cout << "\nMean of squared differences : \t\t" << std_dev;
-
-	std_dev = sqrt(std_dev);
-
-	cout << "\nStandard Deviation : \t\t" << std_dev;
-	
 	InputFileStream.close();
 	InputFileStream.open(input_file_name, ios_base::binary);
+
+	records_iterator = records.begin();
 
 	for(int p = 0; p < LINES; p++) {
 		string line;
@@ -121,7 +140,7 @@ int main() {
 			if(line[c] == ',')
 				column_no++;
 			
-			if(column_no == COLUMN_PROFIT) {				
+			if(column_no == COLUMN_PROFIT + 1) {				
 				c++;
 				int start_idx = c; string f_val = "";				
 				while(line[c] != ',') {
@@ -133,11 +152,9 @@ int main() {
 				for(int i = 0; i < start_idx; i++) {
 					OutputFileStream << line[i];				
 				}
-				
-				float val = std::stof(f_val);
-				float z_score = (val - mean) / std_dev;
-
-				OutputFileStream << val << "," << z_score;
+				Record record = *records_iterator;
+				OutputFileStream << record.profit;
+				records_iterator++;
 
 				for(int i = end_idx; i < line.length(); i++) {
 					OutputFileStream << line[i];				
@@ -147,6 +164,7 @@ int main() {
 			}			
 		}
 	}
+	
 	cout << "\n";
 }
 

@@ -1,12 +1,15 @@
 /**	
-	DMBI Practical No. : 3
-	Aim : Calculate Z-score for profit.
+	DMBI Practical No. : 4
+	Aim : Decimal-Normalization profit.
 	
 	Author : Siddharth Goswami
 	Github : https://github.com/siddharth1024
 */
 
-#include<bits/stdc++.h>
+#include<iostream>
+#include<string.h>
+#include<fstream>
+#include<math.h>
 
 #define input_file_name "Sample.csv"
 #define output_file_normalized_name "Sample_Normalized.csv"
@@ -18,7 +21,7 @@
 using namespace std;
 
 /**
-	Z-Score v' = (v - meanA)/Stand.Dev.A
+	Deci-norm v' = v / 10^j (j is smallest integer such that max(|v'|)) < 1
 */
 
 int main() {	
@@ -30,7 +33,7 @@ int main() {
 	/**
 		Work out the mean.
 	*/
-	float profits[RECORDS], mean = 0, std_dev = 0, z_score = 0;
+	float profits[RECORDS], profits_normalized[RECORDS], max_v = 0;
 
 	string line;
 	getline(InputFileStream, line, '\r');
@@ -48,7 +51,7 @@ int main() {
 
 	for(int c = 0; c < line.length(); c++) { 
 		if(c == insert_idx + 1) {
-			OutputFileStream << ",Z-Score,";
+			OutputFileStream << ",Decimal Normalization,";
 		} else {
 			OutputFileStream << line[c];
 		}
@@ -80,29 +83,20 @@ int main() {
 	}
 
 	for(int p = 0; p < RECORDS; p++) {
-		mean += profits[p];
-	}
-	cout << "\nSum : \t\t" << mean;
-	mean /= RECORDS;
-	cout << "\nMean : \t\t" << mean;
-	cout << "\nRECORDS : \t\t" << RECORDS;
-	
-	for(int p = 0; p < RECORDS; p++) {
-		profits[p] -= mean;
-		profits[p] = profits[p] * profits[p];
+		float mod_profit = (profits[p] < 0) ? profits[p] * -1: profits[p];
+		if(mod_profit > max_v) {
+			max_v = mod_profit;
+		}
 	}
 
-	for(int p = 0; p < RECORDS; p++) {
-		std_dev += profits[p];
+	max_v = (max_v < 0) ? -max_v : max_v;
+	int divider = 1;
+	while (max_v/divider > 1) { divider *= 10; }
+
+	for(int p = 0; p < RECORDS; p++) { 
+		profits_normalized[p] = profits[p] / divider;
 	}
 
-	std_dev /= RECORDS;
-	cout << "\nMean of squared differences : \t\t" << std_dev;
-
-	std_dev = sqrt(std_dev);
-
-	cout << "\nStandard Deviation : \t\t" << std_dev;
-	
 	InputFileStream.close();
 	InputFileStream.open(input_file_name, ios_base::binary);
 
@@ -133,11 +127,8 @@ int main() {
 				for(int i = 0; i < start_idx; i++) {
 					OutputFileStream << line[i];				
 				}
-				
-				float val = std::stof(f_val);
-				float z_score = (val - mean) / std_dev;
 
-				OutputFileStream << val << "," << z_score;
+				OutputFileStream << profits[p] << "," << profits_normalized[p];
 
 				for(int i = end_idx; i < line.length(); i++) {
 					OutputFileStream << line[i];				
@@ -147,6 +138,7 @@ int main() {
 			}			
 		}
 	}
+	
 	cout << "\n";
 }
 
