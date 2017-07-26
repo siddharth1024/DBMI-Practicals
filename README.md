@@ -1,4 +1,4 @@
-# DMBI-Practicals
+# DMBI-Practicals (C++ only)
 Data Mining and Business Intelligence Practicals
 
 1. Normalize profit (0.0 - 1.0)
